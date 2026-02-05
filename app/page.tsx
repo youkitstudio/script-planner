@@ -3,7 +3,6 @@
 import { useState, useRef } from "react"
 import { Download, FileText } from "lucide-react"
 
-// 2분(120초) 기준 725자 = 초당 약 6.04자
 const CHARS_PER_SECOND = 725 / 120
 
 interface Section {
@@ -140,21 +139,18 @@ export default function ScriptPlanner() {
     const imgWidth = canvas.width
     const imgHeight = canvas.height
 
-    // 가로폭 기준으로만 비율 계산 (여백 10mm씩)
     const ratio = (pdfWidth - 20) / imgWidth
-    const imgX = 10  // 왼쪽 여백
+    const imgX = 10
     const scaledWidth = pdfWidth - 20
     const scaledHeight = imgHeight * ratio
-    const pageHeight = pdfHeight - 20  // 상하 여백 10mm씩
+    const pageHeight = pdfHeight - 20
 
     let heightLeft = scaledHeight
-    let position = 10  // 첫 페이지 상단 여백
+    let position = 10
 
-    // 첫 페이지
     pdf.addImage(imgData, "PNG", imgX, position, scaledWidth, scaledHeight)
     heightLeft -= pageHeight
 
-    // 추가 페이지
     while (heightLeft > 0) {
       position = heightLeft - scaledHeight + 10
       pdf.addPage()
@@ -167,7 +163,6 @@ export default function ScriptPlanner() {
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      {/* Header */}
       <header className="border-b border-neutral-200 bg-white">
         <div className="mx-auto max-w-4xl px-6 py-8">
           <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">나레이션 원고 작성</h1>
@@ -176,7 +171,6 @@ export default function ScriptPlanner() {
       </header>
 
       <main className="mx-auto max-w-4xl px-6 py-8">
-        {/* Week Info */}
         <div className="mb-8 flex gap-3">
           <input
             type="text"
@@ -194,7 +188,6 @@ export default function ScriptPlanner() {
           />
         </div>
 
-        {/* Episode Tabs */}
         <div className="mb-8 flex gap-2">
           <button
             onClick={() => setEpisode(1)}
@@ -214,7 +207,6 @@ export default function ScriptPlanner() {
           </button>
         </div>
 
-        {/* Progress */}
         <div className="mb-8 rounded-xl border border-neutral-200 bg-white p-6">
           <div className="mb-4 flex items-end justify-between">
             <div>
@@ -244,7 +236,6 @@ export default function ScriptPlanner() {
           )}
         </div>
 
-        {/* Sections */}
         <div className="space-y-4">
           {sections.map((section, index) => {
             const script = scripts[episode][section.id] || ""
@@ -253,7 +244,6 @@ export default function ScriptPlanner() {
 
             return (
               <div key={section.id} className="rounded-xl border border-neutral-200 bg-white overflow-hidden">
-                {/* Section Header */}
                 <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-4">
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium text-neutral-400">#{index + 1}</span>
@@ -274,7 +264,6 @@ export default function ScriptPlanner() {
                   </div>
                 </div>
 
-                {/* Progress Bar */}
                 <div className="h-1 bg-neutral-50">
                   <div
                     className={`h-full transition-all duration-300 ${
@@ -284,7 +273,6 @@ export default function ScriptPlanner() {
                   />
                 </div>
 
-                {/* Input Area */}
                 {section.hasInput && (
                   <div className="p-5">
                     <textarea
@@ -301,7 +289,6 @@ export default function ScriptPlanner() {
                   </div>
                 )}
 
-                {/* Keywords */}
                 {section.hasKeywords && (
                   <div className="border-t border-neutral-100 p-5">
                     <p className="mb-1 text-sm font-medium text-neutral-700">핵심 키워드 (5개)</p>
@@ -338,7 +325,6 @@ export default function ScriptPlanner() {
                   </div>
                 )}
 
-                {/* Interview */}
                 {section.hasInterview && (
                   <div className="border-t border-neutral-100 p-5">
                     <div className="space-y-4">
@@ -365,7 +351,6 @@ export default function ScriptPlanner() {
                   </div>
                 )}
 
-                {/* Objectives */}
                 {section.hasObjectives && (
                   <div className="border-t border-neutral-100 p-5">
                     <div className="space-y-4">
@@ -395,7 +380,6 @@ export default function ScriptPlanner() {
           })}
         </div>
 
-        {/* Guide */}
         <div className="mt-8 rounded-xl border border-neutral-200 bg-neutral-100 p-6">
           <h3 className="mb-3 text-sm font-medium text-neutral-900">사용 가이드</h3>
           <ul className="space-y-1.5 text-sm text-neutral-600">
@@ -409,7 +393,6 @@ export default function ScriptPlanner() {
           </ul>
         </div>
 
-        {/* Download Button */}
         <div className="mt-8 flex justify-center">
           <button
             onClick={downloadPDF}
@@ -421,7 +404,6 @@ export default function ScriptPlanner() {
         </div>
       </main>
 
-      {/* Hidden Print Area */}
       <div className="fixed -left-[9999px] top-0">
         <div ref={printRef} className="w-[800px] bg-white p-10 font-sans" style={{ fontFamily: "Noto Sans KR, system-ui, sans-serif" }}>
           <div className="mb-8 border-b border-neutral-200 pb-6">
