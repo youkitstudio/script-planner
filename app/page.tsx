@@ -63,6 +63,7 @@ export default function ScriptPlanner() {
     1: { interview: { content: "", source: "" } },
     2: { interview: { content: "", source: "" } },
   })
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
   const printRef = useRef<HTMLDivElement>(null)
 
   const sections = episode === 1 ? EP1_SECTIONS : EP2_SECTIONS
@@ -120,45 +121,85 @@ export default function ScriptPlanner() {
   }
 
   const downloadPDF = async () => {
-    const html2canvas = (await import("html2canvas")).default
-    const { jsPDF } = await import("jspdf")
+    try {
+      setIsGeneratingPDF(true)
 
-    if (!printRef.current) return
+      const html2canvas = (await import("html2canvas")).default
+      const { jsPDF } = await import("jspdf")
 
-    const canvas = await html2canvas(printRef.current, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      backgroundColor: "#ffffff",
-    })
+      if (!printRef.current) {
+        throw new Error("PDF 생성 영역을 찾을 수 없습니다.")
+      }
 
-    const imgData = canvas.toDataURL("image/png")
-    const pdf = new jsPDF("p", "mm", "a4")
-    const pdfWidth = pdf.internal.pageSize.getWidth()
-    const pdfHeight = pdf.internal.pageSize.getHeight()
-    const imgWidth = canvas.width
-    const imgHeight = canvas.height
+      await new Promise(resolve => setTimeout(resolve, 100))
 
-    const ratio = (pdfWidth - 20) / imgWidth
-    const imgX = 10
-    const scaledWidth = pdfWidth - 20
-    const scaledHeight = imgHeight * ratio
-    const pageHeight = pdfHeight - 20
+      const canvas = await html2canvas(printRef.current, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        backgroundColor: "#ffffff",
+        windowWidth: 800,
+      })
 
-    let heightLeft = scaledHeight
-    let position = 10
+      const imgData = canvas.toDataURL("image/png")
+      const pdf = new jsPDF("p", "mm", "a4")
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = pdf.internal.pageSize.getHeight()
+      const imgWidth = canvas.width
+      const imgHeight = canvas.height
 
-    pdf.addImage(imgData, "PNG", imgX, position, scaledWidth, scaledHeight)
-    heightLeft -= pageHeight
+      const margin = 15
+      const ratio = (pdfWidth - margin * 2) / imgWidth
+      const imgX = margin
+      const scaledWidth = pdfWidth - margin * 2
+      const scaledHeight = imgHeight * ratio
+      const pageHeight = pdfHeight - margin * 2
 
-    while (heightLeft > 0) {
-      position = heightLeft - scaledHeight + 10
-      pdf.addPage()
+      let heightLeft = scaledHeight
+      let position = margin
+
       pdf.addImage(imgData, "PNG", imgX, position, scaledWidth, scaledHeight)
       heightLeft -= pageHeight
-    }
 
-    pdf.save(`${weekNumber || "원고"}_${weekTitle || ""}_${episode}차시.pdf`)
+      while (heightLeft > 0) {
+        position = -(scaledHeight - heightLeft) + margin
+        pdf.addPage()
+        pdf.addImage(imgData, "PNG", imgX, position, scaledWidth, scaledHeight)
+        heightLeft -= pageHeight
+      }
+
+      const fileName = `${weekNumber || "원고"}_${weekTitle || ""}_${episode}차시.pdf`
+      
+      const userAgent = navigator.userAgent.toLowerCase()
+      const isSafari = /safari/.test(userAgent) && !/chrome/.test(userAgent)
+      const isIOS = /iphone|ipad|ipod/.test(userAgent)
+
+      if (isSafari || isIOS) {
+        const blob = pdf.output('blob')
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = fileName
+        link.click()
+        setTimeout(() => URL.revokeObjectURL(url), 100)
+      } else {
+        pdf.save(fileName)
+      }
+
+      setIsGeneratingPDF(false)
+
+    } catch (error) {
+      setIsGeneratingPDF(false)
+      console.error("PDF 생성 오류:", error)
+      alert(
+        'PDF 생성 중 오류가 발생했습니다.\n\n' +
+        '다음을 확인해주세요:\n' +
+        '1. 팝업 차단이 해제되어 있는지\n' +
+        '2. 원고 내용이 너무 길지 않은지\n' +
+        '3. 다른 브라우저(Chrome 권장)로 시도해보세요.'
+      )
+    }
   }
 
   return (
@@ -396,17 +437,34 @@ export default function ScriptPlanner() {
         <div className="mt-8 flex justify-center">
           <button
             onClick={downloadPDF}
-            className="flex items-center gap-2 rounded-lg bg-neutral-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-neutral-800"
+            disabled={isGeneratingPDF}
+            className={`flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-medium text-white transition-colors ${
+              isGeneratingPDF 
+                ? 'bg-neutral-400 cursor-not-allowed' 
+                : 'bg-neutral-900 hover:bg-neutral-800'
+            }`}
           >
-            <Download className="h-4 w-4" />
-            PDF 다운로드
+            {isGeneratingPDF ? (
+              <>
+                <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                PDF 생성 중...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                PDF 다운로드
+              </>
+            )}
           </button>
         </div>
       </main>
 
       <div className="fixed -left-[9999px] top-0">
-        <div ref={printRef} className="w-[800px] bg-white p-10 font-sans" style={{ fontFamily: "Noto Sans KR, system-ui, sans-serif" }}>
-          <div className="mb-8 border-b border-neutral-200 pb-6">
+        <div ref={printRef} className="w-[800px] bg-white p-12 font-sans" style={{ fontFamily: "Noto Sans KR, system-ui, sans-serif" }}>
+          <div className="mb-10 border-b-2 border-neutral-200 pb-6">
             <h1 className="text-2xl font-bold text-neutral-900">
               {weekNumber && `${weekNumber} `}{weekTitle && `${weekTitle} `}{episode}차시 원고
             </h1>
@@ -415,41 +473,41 @@ export default function ScriptPlanner() {
             </p>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-8">
             {sections.map((section, index) => {
               const script = scripts[episode][section.id] || ""
               const duration = section.hasInput ? calculateDuration(script) : section.target
 
               return (
-                <div key={section.id} className="border-b border-neutral-100 pb-6">
-                  <div className="mb-2 flex items-center gap-2">
+                <div key={section.id} className="border-b border-neutral-200 pb-6 break-inside-avoid">
+                  <div className="mb-3 flex items-center gap-2">
                     <span className="text-lg font-bold text-neutral-900">#{index + 1} {section.name}</span>
                     {section.note && <span className="text-sm text-neutral-500">({section.note})</span>}
                   </div>
-                  <p className="mb-3 text-sm text-neutral-500">
+                  <p className="mb-4 text-sm text-neutral-500">
                     {formatTime(duration)} / {formatTime(section.target)}
                   </p>
 
                   {section.hasKeywords && (
-                    <div className="mb-3">
+                    <div className="mb-4">
                       <p className="text-sm font-medium text-neutral-700">키워드:</p>
-                      <p className="text-sm text-neutral-600">
+                      <p className="mt-1 text-sm text-neutral-600">
                         {keywords[episode][section.id]?.filter((k) => k.trim()).join(", ") || "-"}
                       </p>
                     </div>
                   )}
 
                   {section.hasInterview && (
-                    <div className="mb-3 space-y-2">
+                    <div className="mb-4 space-y-3">
                       <div>
                         <p className="text-sm font-medium text-neutral-700">영상내용:</p>
-                        <p className="whitespace-pre-wrap text-sm text-neutral-600">
+                        <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-neutral-600">
                           {interviews[episode][section.id]?.content || "-"}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm font-medium text-neutral-700">영상출처:</p>
-                        <p className="whitespace-pre-wrap text-sm text-neutral-600">
+                        <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-600">
                           {interviews[episode][section.id]?.source || "-"}
                         </p>
                       </div>
@@ -457,16 +515,16 @@ export default function ScriptPlanner() {
                   )}
 
                   {section.hasObjectives && (
-                    <div className="mb-3 space-y-2">
+                    <div className="mb-4 space-y-3">
                       <div>
                         <p className="text-sm font-medium text-neutral-700">학습목표:</p>
-                        <p className="whitespace-pre-wrap text-sm text-neutral-600">
+                        <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-neutral-600">
                           {objectives[episode][section.id]?.goal || "-"}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm font-medium text-neutral-700">학습내용:</p>
-                        <p className="whitespace-pre-wrap text-sm text-neutral-600">
+                        <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-neutral-600">
                           {objectives[episode][section.id]?.content || "-"}
                         </p>
                       </div>
@@ -474,7 +532,7 @@ export default function ScriptPlanner() {
                   )}
 
                   {section.hasInput && script && (
-                    <div className="rounded bg-neutral-50 p-4">
+                    <div className="rounded-lg bg-neutral-50 p-4">
                       <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-800">{script}</p>
                     </div>
                   )}
@@ -483,7 +541,7 @@ export default function ScriptPlanner() {
             })}
           </div>
 
-          <div className="mt-8 flex items-center gap-2 text-xs text-neutral-400">
+          <div className="mt-10 flex items-center gap-2 text-xs text-neutral-400">
             <FileText className="h-3 w-3" />
             <span>재난영화로 알아보는 직업이야기 - 나레이션 원고</span>
           </div>
