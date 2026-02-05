@@ -140,29 +140,30 @@ export default function ScriptPlanner() {
     const imgWidth = canvas.width
     const imgHeight = canvas.height
 
-// 가로폭 기준으로만 비율 계산 (여백 포함)
+    // 가로폭 기준으로만 비율 계산 (여백 10mm씩)
     const ratio = (pdfWidth - 20) / imgWidth
     const imgX = 10  // 왼쪽 여백
     const scaledWidth = pdfWidth - 20
     const scaledHeight = imgHeight * ratio
-    const pageHeight = pdfHeight - 20  // 상하 여백
+    const pageHeight = pdfHeight - 20  // 상하 여백 10mm씩
 
     let heightLeft = scaledHeight
     let position = 10  // 첫 페이지 상단 여백
 
-// 첫 페이지
+    // 첫 페이지
     pdf.addImage(imgData, "PNG", imgX, position, scaledWidth, scaledHeight)
     heightLeft -= pageHeight
 
-// 페이지가 더 필요한 경우 자동으로 추가
+    // 추가 페이지
     while (heightLeft > 0) {
-    position = heightLeft - scaledHeight + 10
-    pdf.addPage()
-    pdf.addImage(imgData, "PNG", imgX, position, scaledWidth, scaledHeight)
-    heightLeft -= pageHeight
+      position = heightLeft - scaledHeight + 10
+      pdf.addPage()
+      pdf.addImage(imgData, "PNG", imgX, position, scaledWidth, scaledHeight)
+      heightLeft -= pageHeight
     }
 
-pdf.save(`${weekNumber || "일"}_${episodeTitle || ""}_${episode}A4.pdf`)
+    pdf.save(`${weekNumber || "원고"}_${weekTitle || ""}_${episode}차시.pdf`)
+  }
 
   return (
     <div className="min-h-screen bg-neutral-50">
