@@ -156,17 +156,18 @@ export default function ScriptPlanner() {
       const scaledHeight = imgHeight * ratio
       const pageHeight = pdfHeight - margin * 2
 
-      let heightLeft = scaledHeight
-      let position = margin
+      // 현재 표시할 이미지의 Y 위치
+      let currentY = 0
 
-      pdf.addImage(imgData, "PNG", imgX, position, scaledWidth, scaledHeight)
-      heightLeft -= pageHeight
+      // 첫 페이지
+      pdf.addImage(imgData, "PNG", imgX, margin - currentY, scaledWidth, scaledHeight)
+      currentY += pageHeight
 
-      while (heightLeft > 0) {
-        position = -(scaledHeight - heightLeft) + margin
+      // 추가 페이지들
+      while (currentY < scaledHeight) {
         pdf.addPage()
-        pdf.addImage(imgData, "PNG", imgX, position, scaledWidth, scaledHeight)
-        heightLeft -= pageHeight
+        pdf.addImage(imgData, "PNG", imgX, margin - currentY, scaledWidth, scaledHeight)
+        currentY += pageHeight
       }
 
       const fileName = `${weekNumber || "원고"}_${weekTitle || ""}_${episode}차시.pdf`
